@@ -1,0 +1,34 @@
+接口列表
+
+接口常量
+host: http://176.9.118.102:2404
+
+
+接口1: 设置温度接口
+    url: host/updconf
+    method: post
+    参数:
+        value: {"temperature":121.3,"humidity":"62.9","cpu_temperature":30.8}  温度值
+
+    返回值:
+        无
+
+
+接口2: 获取实时的温度,湿度
+    url: host/gettmp
+    method: post
+    参数:
+        type: temperature | humidity
+
+    返回值:
+        {
+          "data": [
+            "14.0",
+            "26.0",
+            "14.0",
+            "16.0",
+            "16.0"
+          ],
+          "msg": "success",
+          "code": 200
+        }

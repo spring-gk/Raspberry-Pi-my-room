@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+    <link href="../static/css/main.css" rel="stylesheet" type="text/css"/>
+    <link href="../static/css/bootstrap.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/base.css"/>
+    <link rel="stylesheet" href="../static/css/page.css"/>
+    <script src='../static/js/phpjs.js'></script>
+    <script src='http://cdn.bootcss.com/socket.io/1.3.7/socket.io.js'></script>
+    <script src='http://cdn.bootcss.com/jquery/1.11.3/jquery.js'></script>
+    <script src="http://cdn.bootcss.com/echarts/3.3.1/echarts.js"></script>
+    <script src="http://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="photo-wrap">
+            <nav>
+            <a href="javascript:;" class="aBack"></a>温度湿度记录
+            </nav>
+            <div class="wrapper">
+                <div style="width:100%;">
+                    <div id="redistemperature" style="width:100%;height:300px;"></div>
+                    <div id="redishumidity" style="width:100%;height:300px;"></div>
+                </div>
+            </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var redistemperature_chart;
+        var redishumidity_chart;
+        // 基于准备好的dom，初始化echarts实例
+        redistemperature_chart = echarts.init(document.getElementById('redistemperature'));
+        redishumidity_chart = echarts.init(document.getElementById('redishumidity'));
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: '实时温度统计'
+            },
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data: []
+            },
+            toolbox: {
+                feature: {
+                    saveAsImage: {}
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                color:'red',
+                containLabel: true
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: []
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    labels: {
+                        formatter: function () {
+                            return this.value + '°';
+                        }
+                    }
+                }
+            ],
+            series: []
+        };
+
+        //湿度
+        var redishumidity_tmpoptions = [];
+        var redishumidity_queuenameArr = [];
+
+        //温度
+        var redistemperature_tmpoptions = [];
+        var redistemperature_queuenameArr = [];
+
+        //WebSocket配置
+        function webSocketFuc() {
+            var wsServer = 'ws://139.129.201.179:2404/live',
+                    wss = new WebSocket(wsServer);
+            wss.binaryType = "arraybuffer";
+            wss.onopen = function () {
+                console.log('open');
+            }
+            wss.onclose = function () {
+                console.log('断线啦，重新尝试链接...');
+                webSocketFuc();
+            }
+            /* 可以传送json和字符串还有二进制数据 */
+            wss.onmessage = function (ev) {
+                var json_arr = JSON.parse(ev.data);
+                message = json_arr.message;
+                console.log(json_arr);
+                switch (json_arr.type) {
+                    case "redistemperature":
+                            rendertemperature(message,false);
+                        break;
+                    case "redishumidity":
+                            renderhumidity(message,false);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            wss.onerror = function (err) {
+                console.log('无法与服务端链接，重新尝试链接~');
+                webSocketFuc();
+            }
+            return wss;
+        }
+        //初始绘图
+        var arr = ['temperature', 'humidity'];
+        for(var i=0; i<arr.length; i++) {
+            if(arr[i]=='temperature'){
+                //getdata
+                $.post("/gettmp",{type:"temperature"},function(res)
+                {
+                    if(res&&res.code==200)
+                    {
+                        rendertemperature(res.data,true);
+                    }
+                    else
+                    {
+                        console.log(res.msg);
+                    }
+                },"json");
+            }else if(arr[i]=='humidity'){
+                //getdata
+                $.post("/gettmp",{type:"humidity"},function(res)
+                {
+                    if(res&&res.code==200)
+                    {
+                        renderhumidity(res.data,true);
+                    }
+                    else
+                    {
+                        console.log(res.msg);
+                    }
+                },"json");
+            }
+        }
+
+        var wsf = webSocketFuc();
+
+{#        渲染温度#}
+        function rendertemperature(message,mutl){
+            var tname = 'temperature';
+            if (!redistemperature_queuenameArr.hasOwnProperty(tname)) {
+                redistemperature_queuenameArr[tname] = tname;
+            }
+
+            if (array_key_exists(tname, redistemperature_tmpoptions)) {
+                if (redistemperature_tmpoptions[tname].data.length < 300) {
+                    array_push(redistemperature_tmpoptions[tname].data, message.data);
+                } else {
+                    array_shift(redistemperature_tmpoptions[tname].data);
+                    array_push(redistemperature_tmpoptions[tname].data, message.data);
+                }
+            } else {
+                var tt = {};
+                tt.data = [];
+                tt.name = tname;
+                tt.type = 'line';
+                tt.stack = 'total';
+                tt.areaStyle = {normal: {}};
+                if(mutl){
+                    for(var j=0; j<message.length; j++){
+                        array_push(tt.data, message[j].data)
+                    }
+                } else {
+                    tt.data[0] = message.data;
+                }
+                redistemperature_tmpoptions[tname] = tt;
+            }
+            var k = 0;
+            for (var name in redistemperature_tmpoptions) {
+                option.series[k] = redistemperature_tmpoptions[name];
+                k++;
+            }
+            option.legend.data = redistemperature_queuenameArr;
+            option.title.text = '实时湿度';
+            option.title.color = '#fff';
+            redistemperature_chart.setOption(option);
+        }
+
+{#        渲染湿度#}
+        function renderhumidity(message,mutl){
+            var tname = 'humidity';
+            if (!redishumidity_queuenameArr.hasOwnProperty(tname)) {
+                redishumidity_queuenameArr[tname] = tname;
+            }
+            if (array_key_exists(tname, redishumidity_tmpoptions)) {
+                if (redishumidity_tmpoptions[tname].data.length < 300) {
+                    array_push(redishumidity_tmpoptions[tname].data, message.data);
+                } else {
+                    array_shift(redishumidity_tmpoptions[tname].data);
+                    array_push(redishumidity_tmpoptions[tname].data, message.data);
+                }
+            } else {
+                var tt = {};
+                tt.data = [];
+                tt.name = tname;
+                tt.type = 'line';
+                tt.stack = 'total';
+                tt.areaStyle = {normal: {}};
+                if(mutl){
+                    for(var j=0; j<message.length; j++){
+                        array_push(tt.data, message[j].data)
+                    }
+                } else {
+                    tt.data[0] = message.data;
+                }
+                redishumidity_tmpoptions[tname] = tt;
+            }
+            var k = 0;
+            for (var name in redishumidity_tmpoptions) {
+                option.series[k] = redishumidity_tmpoptions[name];
+                k++;
+            }
+            option.legend.data = redishumidity_queuenameArr;
+            option.title.text = '实时湿度';
+            redishumidity_chart.setOption(option);
+        }
+    });
+
+
+</script>
+
+</body>

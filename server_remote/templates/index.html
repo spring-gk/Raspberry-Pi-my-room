@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+        <title>室外园艺浇花系统</title>
+        <link rel="stylesheet" href="/static/css/base.css"/>
+        <link rel="stylesheet" href="/static/css/page.css"/>
+    </head>
+    <body>
+	    <div class="home-wrap">
+	    	<nav>智能浇花<a href="javascript:;" class="crash" id="refresh"></a>
+	    	</nav>
+    		<h2 class="tip" id="tip_info">
+    			{{info['tip_info']}}
+    		</h2>
+    		<div class="waterflowers">
+    		 	<div class="progress">
+				  <section id="sample-pb">
+				    <article>
+				      <div class="number-pb">  
+                        <div class="number-pb-shown"></div>
+				        <div class="number-pb-num"></div>
+				        <div class="number-end"></div>
+				      </div>
+				    </article>
+				  </section>
+				</div>
+    			<div class="flower">
+                {%if info['room_info']['temperature'] > info['room_config']['temperature'] %}
+	    			<img src="/static/img/flower_none.png" class="flower_none" style="opacity:1">
+                    <img src="/static/img/flower_open.png" class="flower_open">
+                {% else %}    
+	    			<img src="/static/img/flower_none.png" class="flower_none">
+                    <img src="/static/img/flower_open.png" class="flower_open" style="opacity:1">
+                {% end %}   
+				</div>
+    			<a href="javascript:;" id="flower_water_open" class="control water-btn">一键浇花</a>
+    		</div>
+	    	<div class="message common-bg">
+                <p>
+			        <span id="room_temperature">{{info['room_info']['temperature']}}°C</span> 
+			        <span>当前温度</span> 
+			    </p>
+			    <p> 
+			        <span id="room_humidity">{{info['room_info']['humidity']}}%</span>
+			        <span>当前湿度</span>
+			    </p>
+	    		<p> 
+			        <span id="cpu_temperature">{{info['cpu_info']['temperature']}}°C</span>
+			        <span>设备温度</span>
+			    </p>
+			    <p> 
+			        <span id="cpu_use">{{info['cpu_info']['cpu_use']}}%</span>
+			        <span>CPU使用</span> 
+			    </p>
+			    <p>
+				    <span id="ram_used">{{round(info['cpu_info']['ram_used']/1024,2)*100}}%</span> 
+				    <span>内存使用</span> 
+				</p>
+			    <p>
+				    <span id="disk_perc">{{info['cpu_info']['disk_perc']}}</span>
+				    <span>存储剩余</span>
+				</p>
+			    
+	    	</div> 
+	    	<div class="setup common-bg">
+	    		<h2>设置参数
+	    			<span>（ {{info['room_config']['update_year']}}年{{info['room_config']['update_month']}}月{{info['room_config']['update_day']}}日 设置过 ）</span>
+					<a href="javascript:void(0);" class="set-btn"></a>
+				</h2>
+				<div class="arguments">
+					<p> 
+						<span>设备过热保护温度</span>
+						<span>{{info['room_config']['cpu_temperature']}}℃</span>
+						<i></i>
+					</p>
+					<p>
+						<span>浇水空气温度</span>
+						<span>{{info['room_config']['temperature']}}℃</span>
+						<i></i>
+					</p>
+					<p>
+						<span>浇水空气湿度</span>
+						<span>{{info['room_config']['humidity']}}%</span>
+						<i></i>
+					</p>
+				</div>
+	    	</div> 
+	    	<div class="check common-bg">
+				<p>
+					<span>设备过热保护</span>
+                    <label>
+	    	           <input class="mui-switch" id="open_cpu_fs" type="checkbox">
+	    	       </label>
+				</p>
+	    		<p>
+					<span>温度湿度</span>
+					<a href="/temperature" class="btn1 btn">查看纪录</a>
+				</p>
+				<p>
+					<span>拍摄照片</span>
+					<a href="/photo" class="btn2 btn">查看纪录</a> 
+				</p>
+	    	</div>
+            <form action="javascript:void(0)" id="config" name="config">
+                <div class="pop-shadow">
+                    <div class="setcon">
+                        <p>
+                            <span>设备过热保护温度 :</span>
+                            <span>
+                                <input name="cpu_temperature" ​pattern="[0-9]*" type="number" value="{{info['room_config']['cpu_temperature']}}" placeholder="请输入温度">
+                            </span>
+                            <span>℃</span>
+                        </p>
+                        <p>
+                            <span>浇水空气温度 :</span>
+                            <span>
+                                <input name="temperature" ​pattern="[0-9]*" type="number" id="temperature" value="{{info['room_config']['temperature']}}" placeholder="请输入温度">
+                            </span>
+                            <span>℃</span>
+                        </p>
+                        <p>
+                            <span>浇水空气湿度 :</span>
+                            <span>
+                                <input  name="humidity" id="humidity" ​pattern="[0-9]*" type="number" value="{{info['room_config']['humidity']}}" placeholder="请输入湿度">
+                            </span>
+                            <span>%</span>
+                        </p>
+                        <a href="javascript:;" class="submit-btn">提交</a>
+                    </div>
+                </div>
+            </form>
+	    </div>  
+		<script src="/static/js/jquery-1.8.1.min.js"></script>
+		<script src="/static/js/jquery.velocity.min.js"></script>
+		<script src="/static/js/number-pb.js"></script>
+		
+		<script>
+			//一键浇花操作
+            flower_water_open_action = false;
+            $("#flower_water_open").click(function(){
+                obj = $(this);
+                obj.text("正在浇花中...");
+                $.post("/",{type:"water_open"},function(res)
+                {
+                    setTimeout(function(){
+                            obj.text('一键浇花');	
+                        },8000);
+                    if(res&&res.code==200)
+                    {
+                        //TODO 等待websocket反馈操作                        
+                    }
+                    else
+                    {
+                        alert(res.msg);
+                        obj.text("一键浇花");
+                    }
+                },"json");
+            });
+            
+            //刷新数据 获取cpu信息 温湿度 拍摄照片
+            $("#refresh").click(function(){
+                $.post("/",{type:"get_info"},function(res)
+                {
+                    if(res&&res.code==200)
+                    {
+                        //TODO 等待websocket反馈操作
+                    }
+                    else
+                    {
+                        alert(res.msg);
+                    }
+                },"json");
+            });  
+
+            //设备过热保护开启
+            $("#open_cpu_fs").click(function(){
+                if($(this).is(':checked'))
+                    type = "cpu_fs_close";
+                else
+                    type = "cpu_fs_open";
+                $.post("/",{type:type},function(res)
+                {
+                    if(res&&res.code==200)
+                    {
+                        //TODO 等待websocket反馈操作
+                    }
+                    else
+                    {
+                        alert(res.msg);
+                    }
+                },"json");
+            });
+            
+            //WebSocket配置
+            function webSocketFuc() {
+                var wsServer = 'ws://139.129.201.179:2404/live',
+                wss = new WebSocket(wsServer);
+                wss.binaryType = "arraybuffer";
+                wss.onopen = function() {
+                         console.log('open');
+                }
+                wss.onclose = function() {
+                    console.log('断线啦，重新尝试链接...');
+                    webSocketFuc();
+                }
+                /* 可以传送json和字符串还有二进制数据 */
+                wss.onmessage = function(ev) {
+                        var json_arr = JSON.parse(ev.data);
+                        message = json_arr.message;
+                        console.log(json_arr);
+                        switch(json_arr.type)
+                        {
+                                case "cpu_info":
+                                        $("#cpu_temperature").text(message.temperature + "°C");
+                                        $("#cpu_use").text(message.cpu_use + "%");
+                                        $("#ram_used").text(message.ram_used + "%");
+                                        $("#disk_perc").text(message.disk_perc);
+                                        break;
+                                case "temperature":
+                                        $("#room_temperature").text(message.temperature + "°C");
+                                        $("#room_humidity").text(message.humidity + "%");
+                                        break;
+                                case "photo":
+                                        $("#tip_info").text("亲爱的主人，有新的花儿照片上传噢~");
+                                        break;
+                                case "flower_water_finish":
+                                        $("#tip_info").text("亲爱的主人，偶已经完成了浇花任务了噢~");
+                                        break;
+                                default:
+                                        break;
+                        }
+                }
+                wss.onerror = function(err) {
+                    console.log('无法与服务端链接，重新尝试链接~');
+                    webSocketFuc();
+                }
+                return wss;
+        }
+        var wsf = webSocketFuc();  
+            
+        $(".set-btn").click(function(){
+            $(".pop-shadow").show();
+        });
+        $(".submit-btn").click(function(){
+            console.log($('#config').serialize());
+            $.post("/updconf",$('#config').serialize(),function(res)
+            {
+                if(res&&res.code==200)
+                {
+                    window.location.reload();
+                }
+                else
+                {
+                    alert(res.msg);
+                }
+            },"json");
+            $(".pop-shadow").hide();
+        });
+        
+        
+        function randomPercentage() {
+            //return Math.floor(Math.random() * 100);
+            {% if info['room_info']['temperature'] > info['room_config']['temperature'] %}
+                return 25;
+            {% else %}
+                return 60;
+            {% end %}
+          }
+          var num = randomPercentage();
+          var controlBar = $('#sample-pb .number-pb').NumberProgressBar({
+            duration:10000,
+            percentage: num
+          });
+          var $controls = $('#sample-pb .control');
+          $('.water-btn').click(function() {
+            animate(100);
+            $(".flower_none").animate({opacity:'0'},5000,function(){
+               $(".flower_open").animate({opacity:'1'},5000);
+            });
+          });
+          function animate(val) {
+            if (val < 0) {
+              num = 0;
+            } else if (val > 100) {
+              num = 100;
+            } else {
+              num = val
+            }
+            controlBar.reach(num);
+          }
+
+        
+		</script>
+    </body>
+</html>

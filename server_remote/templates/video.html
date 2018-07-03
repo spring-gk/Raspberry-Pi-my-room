@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+        <title>我的房间</title>
+        <link rel="stylesheet" href="/static/weui.min.css"/>
+    </head>
+    <body style="padding:30px;">
+{% for element in video %}
+<video width="260" height="240" controls>
+        <source src="static{{element['video_url']}}" type="video/mp4">
+        您的浏览器不支持Video标签。
+    </video><br/>
+{% end %}
+
+    </body>
+</html>

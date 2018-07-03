@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+        <title>室外园艺照片记录</title>
+        <link rel="stylesheet" href="/static/css/base.css"/>
+        <link rel="stylesheet" href="/static/css/page.css"/>
+    </head>
+    <body>
+        <div class="photo-wrap">
+            <nav>
+            <a href="javascript:;" onclick="window.history.back()" class="aBack"></a>照片记录
+            </nav>
+            <div class="piclist">
+            {% for element in photo %}
+                <p>
+                    <img src="/static{{element['photo_url']}}">
+                    <span>{{element['upload_time']}}</span>
+                </p>
+            {% end %}    
+            </div>
+        </div>
+<script src="/static/js/jquery-1.8.1.min.js"></script>
+<script>
+$(function(){
+    
+    //WebSocket配置
+        function webSocketFuc() {
+            var wsServer = 'ws://139.129.201.179:2404/live',
+            wss = new WebSocket(wsServer);
+            wss.binaryType = "arraybuffer";
+            wss.onopen = function() {
+                     console.log('open');
+            }
+            wss.onclose = function() {
+                console.log('断线啦，重新尝试链接...');
+                webSocketFuc();
+            }
+            /* 可以传送json和字符串还有二进制数据 */
+            wss.onmessage = function(ev) {
+                    var json_arr = JSON.parse(ev.data);
+                    console.log(json_arr);
+                    message = json_arr.message;
+                    
+                    switch(json_arr.type)
+                    {
+                            case "photo":
+                                    upload_time = message.upload_time;
+                                    str = '<p><img src="/static'+message.file_url+'"><span>'+upload_time+'</span></p>';
+                                    $(".piclist").prepend(str);
+                                    break;
+                            default:
+                                    break;
+                    }
+            }
+            wss.onerror = function(err) {
+                console.log('无法与服务端链接，重新尝试链接~');
+                webSocketFuc();
+            }
+            return wss;
+    }
+    var wsf = webSocketFuc();  
+
+});
+</script>
+    </body>
+</html>
